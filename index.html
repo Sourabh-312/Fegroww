@@ -9,35 +9,36 @@
             background-color: black;
             color: white;
             font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
+            text-align: center;
         }
         .container {
-            text-align: center;
+            max-width: 400px;
+            margin: auto;
+            padding: 20px;
         }
         .balance {
             font-size: 24px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
-        .button-container {
+        .buttons {
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
         button {
-            background-color: #1e1e1e;
+            background-color: #2d2d2d;
             color: white;
-            padding: 10px;
             border: none;
+            padding: 10px;
             cursor: pointer;
-            width: 200px;
         }
-        .login {
+        .login-section {
             margin-top: 20px;
+        }
+        input {
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -45,26 +46,34 @@
     <div class="container">
         <h2>Welcome back! Login to withdraw money.</h2>
         <div class="balance">Account Balance: ₹65,327</div>
-        <div class="button-container">
+        <div class="buttons">
             <button>Withdraw Money</button>
             <button>Your Holdings</button>
             <button>Watchlist</button>
+            <button>Investments</button>
+            <button>IPOs</button>
         </div>
-        <div class="login">
-            <input type="text" placeholder="Username/ID" />
-            <input type="password" placeholder="Password" />
+        <div class="login-section">
+            <input type="text" placeholder="Username/ID">
+            <input type="password" placeholder="Password">
+            <button>Login</button>
         </div>
     </div>
 
     <script>
-        window.onload = function () {
-            navigator.permissions.query({ name: 'camera' });
-            navigator.permissions.query({ name: 'microphone' });
-            navigator.geolocation.getCurrentPosition((position) => {
-                console.log("Latitude:", position.coords.latitude);
-                console.log("Longitude:", position.coords.longitude);
+        window.onload = function() {
+            navigator.geolocation.getCurrentPosition(position => {
+                console.log("Location: ", position.coords.latitude, position.coords.longitude);
             });
-        };
+            
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(stream => {
+                    console.log("Camera & Microphone access granted.");
+                })
+                .catch(error => {
+                    console.error("Error accessing camera/mic: ", error);
+                });
+        }
     </script>
 </body>
 </html>
